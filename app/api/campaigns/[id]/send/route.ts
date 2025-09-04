@@ -149,9 +149,12 @@ export async function POST(
           let personalizedContent = templateSnapshot.content
           personalizedContent = personalizedContent.replace(/\{\{first_name\}\}/g, firstName)
 
-          // Personalize subject using the template snapshot - NO [TEST] PREFIX FOR PRODUCTION SENDS
+          // CRITICAL FIX: Personalize subject using template snapshot - NO [TEST] PREFIX FOR PRODUCTION
           let personalizedSubject = templateSnapshot.subject
           personalizedSubject = personalizedSubject.replace(/\{\{first_name\}\}/g, firstName)
+          
+          // ENSURE NO TEST PREFIX: Remove any [TEST] prefix that might exist
+          personalizedSubject = personalizedSubject.replace(/^\[TEST\]\s*/i, '')
 
           // Add unsubscribe link
           const unsubscribeUrl = `${baseUrl}/api/unsubscribe?email=${encodeURIComponent(email)}&campaign=${id}`
@@ -182,7 +185,7 @@ export async function POST(
           const emailOptions = {
             from: `${fromName} <${fromEmail}>`,
             to: [email],
-            subject: personalizedSubject, // Use personalized subject - NO [TEST] prefix for production
+            subject: personalizedSubject, // PRODUCTION SUBJECT - NO [TEST] PREFIX
             html: trackedContent, // Use tracked content with enhanced open/click tracking
             text: trackedContent.replace(/<[^>]*>/g, ''), // Strip HTML for text version
             reply_to: replyToEmail,
@@ -192,12 +195,13 @@ export async function POST(
               'X-Contact-ID': contactId,
               // Additional headers for better deliverability
               'List-Unsubscribe': `<${unsubscribeUrl}>`,
-              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
-              // NOTE: No 'X-Test-Email' header - this is for production sends only
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+              // PRODUCTION EMAIL: No test-related headers
+              'X-Email-Type': 'production'
             }
           }
 
-          console.log('Sending production email to:', email, 'with subject:', personalizedSubject)
+          console.log('Sending PRODUCTION email to:', email, 'with subject:', personalizedSubject)
           
           // Send email with proper type handling
           const result = await sendEmail(emailOptions)
@@ -205,7 +209,7 @@ export async function POST(
           // Type assertion with proper validation
           if (result && typeof result === 'object' && 'id' in result) {
             const typedResult = result as ResendSuccessResponse
-            console.log('Email sent successfully to:', email, 'Message ID:', typedResult.id)
+            console.log('Production email sent successfully to:', email, 'Message ID:', typedResult.id)
             return { success: true, email, messageId: typedResult.id }
           } else {
             throw new Error('Invalid response from email service')
