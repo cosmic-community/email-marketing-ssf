@@ -9,12 +9,17 @@ export function addTrackingToEmail(
   // Create multiple tracking pixels with different approaches for maximum compatibility
   // Some email clients block certain implementations, so we use multiple fallbacks
   
+  // Clean the campaign and contact IDs to ensure no test indicators leak through
+  const cleanCampaignId = campaignId.replace(/[^a-zA-Z0-9\-_]/g, '')
+  const cleanContactId = contactId.replace(/[^a-zA-Z0-9\-_]/g, '')
+  const timestamp = Date.now()
+  
   // Method 1: Standard tracking pixel in a table (best for most email clients)
   const standardPixel = `
     <table role="presentation" style="width: 1px; height: 1px; margin: 0; padding: 0; border: 0; border-collapse: collapse; font-size: 1px; line-height: 1px;">
       <tr>
         <td style="width: 1px; height: 1px; margin: 0; padding: 0; border: 0; font-size: 1px; line-height: 1px; overflow: hidden;">
-          <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(campaignId)}&u=${encodeURIComponent(contactId)}&m=img&t=${Date.now()}" 
+          <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(cleanCampaignId)}&u=${encodeURIComponent(cleanContactId)}&m=img&t=${timestamp}" 
                width="1" 
                height="1" 
                style="width: 1px !important; height: 1px !important; margin: 0 !important; padding: 0 !important; border: none !important; display: block !important; max-width: 1px !important; max-height: 1px !important; min-width: 1px !important; min-height: 1px !important; opacity: 0; visibility: hidden;" 
@@ -27,11 +32,11 @@ export function addTrackingToEmail(
 
   // Method 2: CSS background image pixel (backup for clients that strip img tags)
   const backgroundPixel = `
-    <div style="width: 1px; height: 1px; background-image: url('${baseUrl}/api/track/open?c=${encodeURIComponent(campaignId)}&u=${encodeURIComponent(contactId)}&m=bg&t=${Date.now()}'); background-repeat: no-repeat; background-size: 1px 1px; overflow: hidden; font-size: 1px; line-height: 1px; opacity: 0; position: absolute; left: -9999px;"></div>`
+    <div style="width: 1px; height: 1px; background-image: url('${baseUrl}/api/track/open?c=${encodeURIComponent(cleanCampaignId)}&u=${encodeURIComponent(cleanContactId)}&m=bg&t=${timestamp}'); background-repeat: no-repeat; background-size: 1px 1px; overflow: hidden; font-size: 1px; line-height: 1px; opacity: 0; position: absolute; left: -9999px;"></div>`
 
   // Method 3: Alternative image implementation (different attributes)
   const alternativePixel = `
-    <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(campaignId)}&u=${encodeURIComponent(contactId)}&m=alt&t=${Date.now()}" 
+    <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(cleanCampaignId)}&u=${encodeURIComponent(cleanContactId)}&m=alt&t=${timestamp}" 
          width="1" 
          height="1" 
          border="0" 
@@ -41,7 +46,7 @@ export function addTrackingToEmail(
   // Method 4: Hidden div with minimal tracking (for clients that support it)
   const hiddenPixel = `
     <div style="display: none; width: 0; height: 0; overflow: hidden; opacity: 0; font-size: 0; line-height: 0; color: transparent; background: transparent;">
-      <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(campaignId)}&u=${encodeURIComponent(contactId)}&m=hidden&t=${Date.now()}" width="1" height="1" alt="" border="0" style="display: none;">
+      <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(cleanCampaignId)}&u=${encodeURIComponent(cleanContactId)}&m=hidden&t=${timestamp}" width="1" height="1" alt="" border="0" style="display: none;">
     </div>`
 
   // Combine all tracking pixels for maximum compatibility
@@ -62,7 +67,7 @@ export function addTrackingToEmail(
   // Also try to insert a pixel early in the content for faster loading
   const earlyPixel = `
     <div style="width: 0; height: 0; overflow: hidden; opacity: 0; position: absolute; left: -9999px;">
-      <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(campaignId)}&u=${encodeURIComponent(contactId)}&m=early&t=${Date.now()}" width="1" height="1" alt="" border="0" style="display: none;">
+      <img src="${baseUrl}/api/track/open?c=${encodeURIComponent(cleanCampaignId)}&u=${encodeURIComponent(cleanContactId)}&m=early&t=${timestamp}" width="1" height="1" alt="" border="0" style="display: none;">
     </div>`
   
   // Insert early pixel after opening body tag or at the beginning
@@ -91,9 +96,9 @@ export function addTrackingToEmail(
         return match
       }
 
-      // Create click tracking URL with timestamp for uniqueness
+      // Create click tracking URL with timestamp for uniqueness and clean IDs
       const encodedUrl = encodeURIComponent(url)
-      const trackingUrl = `${baseUrl}/api/track/click?c=${encodeURIComponent(campaignId)}&u=${encodeURIComponent(contactId)}&url=${encodedUrl}&t=${Date.now()}`
+      const trackingUrl = `${baseUrl}/api/track/click?c=${encodeURIComponent(cleanCampaignId)}&u=${encodeURIComponent(cleanContactId)}&url=${encodedUrl}&t=${timestamp}`
       return `href="${trackingUrl}"`
     }
   )

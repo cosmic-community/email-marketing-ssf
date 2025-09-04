@@ -149,22 +149,32 @@ export async function POST(
           let personalizedContent = templateSnapshot.content
           personalizedContent = personalizedContent.replace(/\{\{first_name\}\}/g, firstName)
 
-          // CRITICAL FIX: Comprehensive subject line cleaning for production
+          // CRITICAL FIX: Enhanced subject line cleaning for production emails
           let personalizedSubject = templateSnapshot.subject
           
           // First, personalize the subject with contact data
           personalizedSubject = personalizedSubject.replace(/\{\{first_name\}\}/g, firstName)
           
-          // PRODUCTION EMAIL: Remove ALL variations of test prefixes
+          // PRODUCTION EMAIL: Remove ALL variations of test prefixes with enhanced regex
           // This comprehensive regex handles all common test prefix patterns:
-          // [TEST], [Test], [test], [TEST:], [TEST -], [TEST|], etc.
-          personalizedSubject = personalizedSubject.replace(/^\s*\[(?:TEST|Test|test)(?:[:\-\|\s][^\]]*?)?\]\s*/g, '').trim()
+          // [TEST], [Test], [test], [TEST:], [TEST -], [TEST|], [TEST anything], etc.
+          personalizedSubject = personalizedSubject
+            // Remove [TEST...] patterns (most common)
+            .replace(/^\s*\[(?:TEST|Test|test)(?:[:\-\|\s].*?)?\]\s*/g, '')
+            // Remove TEST: or Test: prefixes
+            .replace(/^(?:TEST|Test|test)\s*[\-\:\|]\s*/g, '')
+            // Remove standalone TEST or Test at the beginning
+            .replace(/^(?:TEST|Test|test)\s+/g, '')
+            // Remove any remaining test indicators in parentheses
+            .replace(/^\s*\((?:TEST|Test|test)(?:[:\-\|\s].*?)?\)\s*/g, '')
+            // Final cleanup: normalize whitespace and trim
+            .replace(/\s+/g, ' ')
+            .trim()
           
-          // Additional cleanup for other test indicators that might be in templates
-          personalizedSubject = personalizedSubject.replace(/^(?:TEST\s*[\-\:\|]\s*|Test\s*[\-\:\|]\s*|test\s*[\-\:\|]\s*)/gi, '').trim()
-          
-          // Remove any leading/trailing whitespace and normalize spaces
-          personalizedSubject = personalizedSubject.replace(/\s+/g, ' ').trim()
+          // Additional safety check: if subject is empty after cleaning, use template name
+          if (!personalizedSubject || personalizedSubject.length === 0) {
+            personalizedSubject = templateSnapshot.name || 'Email Newsletter'
+          }
           
           console.log('Original template subject:', templateSnapshot.subject)
           console.log('Production email subject (fully cleaned):', personalizedSubject)
@@ -198,7 +208,7 @@ export async function POST(
           const emailOptions = {
             from: `${fromName} <${fromEmail}>`,
             to: [email],
-            subject: personalizedSubject, // PRODUCTION SUBJECT - FULLY CLEANED OF TEST PREFIXES
+            subject: personalizedSubject, // PRODUCTION SUBJECT - FULLY CLEANED OF ALL TEST INDICATORS
             html: trackedContent, // Use tracked content with enhanced open/click tracking
             text: trackedContent.replace(/<[^>]*>/g, ''), // Strip HTML for text version
             reply_to: replyToEmail,
@@ -209,8 +219,9 @@ export async function POST(
               // Additional headers for better deliverability
               'List-Unsubscribe': `<${unsubscribeUrl}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-              // PRODUCTION EMAIL: No test-related headers
-              'X-Email-Type': 'production'
+              // PRODUCTION EMAIL: Clean headers with no test indicators
+              'X-Email-Type': 'production',
+              'X-Template-ID': template.id
             }
           }
 
