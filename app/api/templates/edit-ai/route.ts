@@ -117,8 +117,8 @@ export async function POST(request: NextRequest) {
             )
 
             let processedContext = ''
-            let firstMediaUrl = null // Track the first media URL for AI analysis
-            
+            let firstMediaUrl: string | null = null // Explicit type annotation to fix TS7034 and TS7005
+
             // Process context items if provided
             if (context_items && context_items.length > 0) {
               controller.enqueue(
