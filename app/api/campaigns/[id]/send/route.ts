@@ -149,7 +149,7 @@ export async function POST(
           let personalizedContent = templateSnapshot.content
           personalizedContent = personalizedContent.replace(/\{\{first_name\}\}/g, firstName)
 
-          // Personalize subject using the template snapshot
+          // Personalize subject using the template snapshot - NO [TEST] PREFIX FOR PRODUCTION SENDS
           let personalizedSubject = templateSnapshot.subject
           personalizedSubject = personalizedSubject.replace(/\{\{first_name\}\}/g, firstName)
 
@@ -182,7 +182,7 @@ export async function POST(
           const emailOptions = {
             from: `${fromName} <${fromEmail}>`,
             to: [email],
-            subject: personalizedSubject, // Use personalized subject from snapshot
+            subject: personalizedSubject, // Use personalized subject - NO [TEST] prefix for production
             html: trackedContent, // Use tracked content with enhanced open/click tracking
             text: trackedContent.replace(/<[^>]*>/g, ''), // Strip HTML for text version
             reply_to: replyToEmail,
@@ -193,10 +193,11 @@ export async function POST(
               // Additional headers for better deliverability
               'List-Unsubscribe': `<${unsubscribeUrl}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+              // NOTE: Removed 'X-Test-Email' header - this is for production sends only
             }
           }
 
-          console.log('Sending email to:', email, 'with tracking enabled')
+          console.log('Sending production email to:', email, 'with subject:', personalizedSubject)
           
           // Send email with proper type handling
           const result = await sendEmail(emailOptions)
