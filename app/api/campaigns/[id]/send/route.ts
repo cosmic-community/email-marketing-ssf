@@ -193,7 +193,7 @@ export async function POST(
               // Additional headers for better deliverability
               'List-Unsubscribe': `<${unsubscribeUrl}>`,
               'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
-              // NOTE: Removed 'X-Test-Email' header - this is for production sends only
+              // NOTE: No 'X-Test-Email' header - this is for production sends only
             }
           }
 
