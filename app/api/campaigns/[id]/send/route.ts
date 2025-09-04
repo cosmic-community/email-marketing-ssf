@@ -149,20 +149,25 @@ export async function POST(
           let personalizedContent = templateSnapshot.content
           personalizedContent = personalizedContent.replace(/\{\{first_name\}\}/g, firstName)
 
-          // CRITICAL FIX: Clean subject line for production - NO [TEST] prefix
+          // CRITICAL FIX: Comprehensive subject line cleaning for production
           let personalizedSubject = templateSnapshot.subject
           
           // First, personalize the subject with contact data
           personalizedSubject = personalizedSubject.replace(/\{\{first_name\}\}/g, firstName)
           
-          // PRODUCTION EMAIL: Remove ANY [TEST] prefix that might exist from template
-          // This handles various formats: [TEST], [Test], [test], etc.
-          personalizedSubject = personalizedSubject.replace(/^\[TEST\]/i, '').trim()
-          personalizedSubject = personalizedSubject.replace(/^\[Test\]/i, '').trim()
-          personalizedSubject = personalizedSubject.replace(/^\[test\]/i, '').trim()
+          // PRODUCTION EMAIL: Remove ALL variations of test prefixes
+          // This comprehensive regex handles all common test prefix patterns:
+          // [TEST], [Test], [test], [TEST:], [TEST -], [TEST|], etc.
+          personalizedSubject = personalizedSubject.replace(/^\s*\[(?:TEST|Test|test)(?:[:\-\|\s][^\]]*?)?\]\s*/g, '').trim()
+          
+          // Additional cleanup for other test indicators that might be in templates
+          personalizedSubject = personalizedSubject.replace(/^(?:TEST\s*[\-\:\|]\s*|Test\s*[\-\:\|]\s*|test\s*[\-\:\|]\s*)/gi, '').trim()
+          
+          // Remove any leading/trailing whitespace and normalize spaces
+          personalizedSubject = personalizedSubject.replace(/\s+/g, ' ').trim()
           
           console.log('Original template subject:', templateSnapshot.subject)
-          console.log('Production email subject (cleaned):', personalizedSubject)
+          console.log('Production email subject (fully cleaned):', personalizedSubject)
 
           // Add unsubscribe link
           const unsubscribeUrl = `${baseUrl}/api/unsubscribe?email=${encodeURIComponent(email)}&campaign=${id}`
@@ -193,7 +198,7 @@ export async function POST(
           const emailOptions = {
             from: `${fromName} <${fromEmail}>`,
             to: [email],
-            subject: personalizedSubject, // PRODUCTION SUBJECT - NO [TEST] PREFIX
+            subject: personalizedSubject, // PRODUCTION SUBJECT - FULLY CLEANED OF TEST PREFIXES
             html: trackedContent, // Use tracked content with enhanced open/click tracking
             text: trackedContent.replace(/<[^>]*>/g, ''), // Strip HTML for text version
             reply_to: replyToEmail,
