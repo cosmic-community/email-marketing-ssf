@@ -117,7 +117,8 @@ export async function POST(request: NextRequest) {
             )
 
             let processedContext = ''
-            
+            let firstMediaUrl: string | null = null // Explicit type annotation to fix TS7034 and TS7005
+
             // Process context items if provided
             if (context_items && context_items.length > 0) {
               controller.enqueue(
@@ -136,6 +137,12 @@ export async function POST(request: NextRequest) {
                     encoder.encode('data: {"type":"status","message":"Processing reference media...","progress":40}\n\n')
                   )
                   const mediaData = await processMediaFile(item.url)
+                  
+                  // Set the first media URL for AI analysis
+                  if (!firstMediaUrl && mediaData.media_url) {
+                    firstMediaUrl = mediaData.media_url
+                  }
+                  
                   return `\nReference Media: ${mediaData.title}\nURL: ${mediaData.media_url}\n${mediaData.imgix_url ? `Optimized URL: ${mediaData.imgix_url}` : ''}\n---\n`
                 }
                 return `\nReference: ${item.url}\n---\n`
@@ -191,12 +198,19 @@ IMPORTANT: DO NOT include or modify any unsubscribe links - these are added auto
               encoder.encode('data: {"type":"status","message":"Applying AI improvements...","progress":60}\n\n')
             )
 
-            // Generate improved content with Cosmic AI streaming
-            const aiResponse = await cosmic.ai.generateText({
+            // Generate improved content with Cosmic AI streaming - Now includes media_url if available
+            const aiRequestParams: any = {
               prompt: aiPrompt,
               max_tokens: 60000,
               stream: true
-            })
+            }
+
+            // Add media_url if we have a media file in context
+            if (firstMediaUrl) {
+              aiRequestParams.media_url = firstMediaUrl
+            }
+
+            const aiResponse = await cosmic.ai.generateText(aiRequestParams)
 
             // Handle both streaming and non-streaming responses
             if (aiResponse && typeof aiResponse === 'object' && 'on' in aiResponse) {
