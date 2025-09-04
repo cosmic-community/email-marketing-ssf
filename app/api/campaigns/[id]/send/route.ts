@@ -149,12 +149,20 @@ export async function POST(
           let personalizedContent = templateSnapshot.content
           personalizedContent = personalizedContent.replace(/\{\{first_name\}\}/g, firstName)
 
-          // CRITICAL FIX: Personalize subject using template snapshot - NO [TEST] PREFIX FOR PRODUCTION
+          // CRITICAL FIX: Clean subject line for production - NO [TEST] prefix
           let personalizedSubject = templateSnapshot.subject
+          
+          // First, personalize the subject with contact data
           personalizedSubject = personalizedSubject.replace(/\{\{first_name\}\}/g, firstName)
           
-          // ENSURE NO TEST PREFIX: Remove any [TEST] prefix that might exist
-          personalizedSubject = personalizedSubject.replace(/^\[TEST\]\s*/i, '')
+          // PRODUCTION EMAIL: Remove ANY [TEST] prefix that might exist from template
+          // This handles various formats: [TEST], [Test], [test], etc.
+          personalizedSubject = personalizedSubject.replace(/^\[TEST\]/i, '').trim()
+          personalizedSubject = personalizedSubject.replace(/^\[Test\]/i, '').trim()
+          personalizedSubject = personalizedSubject.replace(/^\[test\]/i, '').trim()
+          
+          console.log('Original template subject:', templateSnapshot.subject)
+          console.log('Production email subject (cleaned):', personalizedSubject)
 
           // Add unsubscribe link
           const unsubscribeUrl = `${baseUrl}/api/unsubscribe?email=${encodeURIComponent(email)}&campaign=${id}`
